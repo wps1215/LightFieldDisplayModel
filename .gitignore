@@ -1,0 +1,9 @@
+.vs
+
+build
+
+bin
+output
+data/sample_*.json
+
+*/*.user
