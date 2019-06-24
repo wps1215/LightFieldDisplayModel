@@ -15,7 +15,7 @@ Model of Light Field Display
 
 
 ## <a name="BuildInstructionsWin"></a> Build instructions (for Windows).
-1. Insider the project root folder ("LightFieldDisplayModel"), create subfolder "build".<br>
+1. Inside the project root folder ("LightFieldDisplayModel"), create subfolder "build".<br>
 2. Open CMake.<br>
    Specify path to source as the path to the project root (e.g., "F:/Work/LightFieldDisplayModel").<br>
    Specify path to build as the path to "build" folder (e.g., "F:/Work/LightFieldDisplayModel/build").<br>
@@ -23,6 +23,7 @@ Model of Light Field Display
    Press "Configure". Wait till finish.<br>
    Press "Generate". Wait till finish.<br>
 3. Open "build/LightFieldDisplayModel.sln".<br>
+4. Build all projects.<br>
 
 
 ## <a name="RunInstructionsWin"></a> Run instructions (for Windows).
