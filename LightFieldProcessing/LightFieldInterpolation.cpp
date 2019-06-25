@@ -18,7 +18,7 @@
 
 
 const int num_projectors_contributes_halved = 4;
-const float contribution_epsilon = 0.01f;
+const float weight_epsilon = 0.0001f;
 
 const float gaussian_half_decay = 1.11741f;
 const float gaussian_half_decay_sqr = gaussian_half_decay*gaussian_half_decay;
@@ -229,23 +229,41 @@ bool LightFieldInterpolation::Visualize_HoloVizio_to_Camera( const Image3D& holo
 				0.0f );
 			const float interpolatedProjectorIndex = InterpolatedProjectorIndex( screenPos, cameraPos );
 			const int leftProjId = std::min<int>(std::max<int>( static_cast<int>(interpolatedProjectorIndex), 0 ), num_projectors-2 );
+			const int rightProjId = leftProjId + 1;
 			Vec3f interpolatedValue = Vec3f(0.0f,0.0f,0.0f);
-			float sumOfVeights = 0.0f;
+			float sumOfWeights = 0.0f;
 			const int projIdMin = std::max<int>( leftProjId - num_projectors_contributes_halved + 1, 0 );
 			const int projIdMax = std::min<int>( leftProjId + num_projectors_contributes_halved, num_projectors - 1 );
 			for ( int projId = projIdMin; projId <= projIdMax; ++projId )
 			{
 				const Vec3f projectorPos( holoVizioModel.projectors_pos_x[projId], holoVizioModel.projectors_pos_y[projId], holoVizioModel.projectors_pos_z[projId] );
 				const float weight = ProjectorWeight( projectorPos, screenPos, cameraPos );
-				if ( weight > contribution_epsilon )
+				if ( weight > weight_epsilon )
 				{
 					const Vec3f color = holoVizioImage.at(x,y,projId);
 					interpolatedValue = interpolatedValue + color*weight;
-					sumOfVeights += weight;
+					sumOfWeights += weight;
 				}
 			}
-			if ( normalize && sumOfVeights > contribution_epsilon )
-				interpolatedValue = interpolatedValue * (1.0f/sumOfVeights);
+			if ( normalize && sumOfWeights > weight_epsilon )
+			{
+#if 0
+				interpolatedValue = interpolatedValue * (1.0f/sumOfWeights);
+#else
+				const float leftMaximalWeightsSum = MaximalProjectorWeightsSum( screenPos, leftProjId, projIdMin, projIdMax );
+				const float rightMaximalWeightsSum = MaximalProjectorWeightsSum( screenPos, rightProjId, projIdMin, projIdMax );
+				const float cameraTan = (cameraPos.x - screenPos.x) / (cameraPos.z - screenPos.z);
+				const float leftProjTan = (holoVizioModel.projectors_pos_x[leftProjId] - screenPos.x) / (holoVizioModel.projectors_pos_z[leftProjId] - screenPos.z);
+				const float rightProjTan = (holoVizioModel.projectors_pos_x[rightProjId] - screenPos.x) / (holoVizioModel.projectors_pos_z[rightProjId] - screenPos.z);
+				const float cameraAngle = std::atan( cameraTan );
+				const float leftProjAngle = std::atan( leftProjTan );
+				const float rightProjAngle = std::atan( rightProjTan );
+				const float leftRightRatio = std::min<float>(std::max<float>( (cameraAngle-leftProjAngle)/(rightProjAngle-leftProjAngle), 0.0f), 1.0f);
+				const float curMaximalWeightsSum = (1.0f-leftRightRatio)*leftMaximalWeightsSum + leftRightRatio*rightMaximalWeightsSum;
+				const float normalizationValue = curMaximalWeightsSum;
+				interpolatedValue = interpolatedValue * (1.0f/normalizationValue);
+#endif
+			}
 			cameraImage.at(x,y) = interpolatedValue;
 		}
 	}
@@ -265,7 +283,6 @@ float LightFieldInterpolation::ProjectorWeight( const Vec3f& projectorPos, const
 	const float angularScatteringSqr = holoVizioModel.angular_scattering*holoVizioModel.angular_scattering;
 	const float gaussianArgSqr = angleDiff*angleDiff;
 	const float gaussianSigmaSqr = angularScatteringSqr/gaussian_half_decay_sqr;
-	//const float weight = std::exp(-gaussianArgSqr/(2.0f*gaussianSigmaSqr)) / sqrt(2.0f*gaussianSigmaSqr*3.14159f);
 	const float weight = std::exp( -gaussianArgSqr/gaussianSigmaSqr );
 	return weight;
 }
@@ -306,7 +323,6 @@ float LightFieldInterpolation::InterpolatedCameraIndex( const Vec3f& screenPos, 
 	const float targetAngle = std::atan( targetTan );
 	const float leftCameraAngle = std::atan( leftCameraTan );
 	const float rightCameraAngle = std::atan( rightCameraTan );
-	//float weight = (targetTan - leftCameraTan) / (rightCameraTan - leftCameraTan);
 	float weight = (targetAngle - leftCameraAngle) / (rightCameraAngle - leftCameraAngle);
 	weight = std::min<float>( std::max<float>( weight, 0.0f ), 1.0f );
 	return static_cast<float>(leftCameraId) + weight;
@@ -348,7 +364,20 @@ float LightFieldInterpolation::InterpolatedProjectorIndex( const Vec3f& screenPo
 	const float targetAngle = std::atan( targetTan );
 	const float leftProjAngle = std::atan( leftProjTan );
 	const float rightProjAngle = std::atan( rightProjTan );
-	//float weight = (targetTan - leftCameraTan) / (rightCameraTan - leftCameraTan);
 	float weight = (targetAngle - leftProjAngle) / (rightProjAngle - leftProjAngle);
 	return static_cast<float>(leftProjId) + weight;
+}
+
+
+float LightFieldInterpolation::MaximalProjectorWeightsSum( const Vec3f& screenPos, const int projIdCentral, const int projIdMin, const int projIdMax )
+{
+	const Vec3f projectorCentralPos( holoVizioModel.projectors_pos_x[projIdCentral], holoVizioModel.projectors_pos_y[projIdCentral], holoVizioModel.projectors_pos_z[projIdCentral] );
+	float sumOfWeights = 0.0f;
+	for ( int projId = projIdMin; projId <= projIdMax; ++projId )
+	{
+		const Vec3f projectorPos( holoVizioModel.projectors_pos_x[projId], holoVizioModel.projectors_pos_y[projId], holoVizioModel.projectors_pos_z[projId] );
+		const float weight = ProjectorWeight( projectorPos, screenPos, projectorCentralPos );
+		sumOfWeights += weight;
+	}
+	return sumOfWeights;
 }

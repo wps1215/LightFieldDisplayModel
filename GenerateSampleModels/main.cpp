@@ -4,6 +4,9 @@
 #include "geometry.h"
 
 
+const float observerDist = 2000.0f;
+
+
 void GenerateDefaultHoloVizioModel()
 {
 	HoloVizioModel holovizioModel;
@@ -12,17 +15,26 @@ void GenerateDefaultHoloVizioModel()
 	holovizioModel.image_size_x = 1000;
 	holovizioModel.image_size_y = 600;
 	//holovizioModel.angular_scattering = 0.1f;
-	holovizioModel.observer_distance = 2000.0f;
+	holovizioModel.observer_distance = observerDist;
 	holovizioModel.screen_size_x = 1000.0f;
 	holovizioModel.screen_size_y = 600.0f;
 	holovizioModel.projectors_pos_x.resize( holovizioModel.num_projectors );
 	holovizioModel.projectors_pos_y.resize( holovizioModel.num_projectors );
 	holovizioModel.projectors_pos_z.resize( holovizioModel.num_projectors );
-	for ( int projId = 0; projId < holovizioModel.num_projectors; ++projId )
 	{
-		holovizioModel.projectors_pos_x.at( projId ) = 100.0f * static_cast<float>(projId - 10);
-		holovizioModel.projectors_pos_y.at( projId ) = 0.0f;
-		holovizioModel.projectors_pos_z.at( projId ) = -500.0f;
+		// Generate uniformly distributed set of projectors.
+		const int numProjectors = holovizioModel.num_projectors;
+		const float projectorsMinX = -1000.0f;
+		const float projectorsMaxX = 1000.0f;
+		const float projectorsY = 0.0f;
+		const float projectorsZ = -700.0f;
+		for ( int projId = 0; projId < numProjectors; ++projId )
+		{
+			const float ratio = static_cast<float>(projId) / static_cast<float>(numProjectors-1);
+			holovizioModel.projectors_pos_x.at( projId ) = projectorsMinX + ratio*(projectorsMaxX-projectorsMinX);
+			holovizioModel.projectors_pos_y.at( projId ) = projectorsY;
+			holovizioModel.projectors_pos_z.at( projId ) = projectorsZ;
+		}
 	}
 	{
 		// Evaluate angular scattering by rule of thumb.
@@ -50,11 +62,20 @@ void GenerateDefaultMultiViewModel()
 	multiviewModel.cameras_pos_x.resize( multiviewModel.num_cameras );
 	multiviewModel.cameras_pos_y.resize( multiviewModel.num_cameras );
 	multiviewModel.cameras_pos_z.resize( multiviewModel.num_cameras );
-	for ( int cameraId = 0; cameraId < multiviewModel.num_cameras; ++cameraId )
 	{
-		multiviewModel.cameras_pos_x.at( cameraId ) = 100.0f * static_cast<float>(cameraId - 10);
-		multiviewModel.cameras_pos_y.at( cameraId ) = 0.0f;
-		multiviewModel.cameras_pos_z.at( cameraId ) = 2000.0f;
+		// Generate uniformly distributed set of views.
+		const int numViews = multiviewModel.num_cameras;
+		const float viewMinX = -2000.0f;
+		const float viewMaxX = 2000.0f;
+		const float viewY = 0.0f;
+		const float viewZ = observerDist;
+		for ( int viewId = 0; viewId < numViews; ++viewId )
+		{
+			const float ratio = static_cast<float>(viewId) / static_cast<float>(numViews-1);
+			multiviewModel.cameras_pos_x.at( viewId ) = viewMinX + ratio*(viewMaxX-viewMinX);
+			multiviewModel.cameras_pos_y.at( viewId ) = viewY;
+			multiviewModel.cameras_pos_z.at( viewId ) = viewZ;
+		}
 	}
 	multiviewModel.Serialize( "../../data/sample_multiviewmodel.json" );
 }

@@ -43,6 +43,7 @@ public:
 private:
 	float InterpolatedCameraIndex( const Vec3f& screenPos, const Vec3f& projectorPos );
 	float InterpolatedProjectorIndex( const Vec3f& screenPos, const Vec3f& cameraPos );
+	float MaximalProjectorWeightsSum( const Vec3f& screenPos, const int projIdCentral, const int projIdMin, const int projIdMax );
 
 private:
 	HoloVizioModel holoVizioModel;
