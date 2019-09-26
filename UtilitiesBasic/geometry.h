@@ -4,6 +4,7 @@
 #include <cmath>
 #include <vector>
 #include <cassert>
+#include <iostream>
 
 
 // Based on tinyraytracer project: https://github.com/ssloy/tinyraytracer
